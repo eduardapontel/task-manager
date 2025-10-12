@@ -3,18 +3,20 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "dev": "tsx watch src/server.ts"
+    "dev": "tsx watch --env-file .env src/server.ts"
   },
   "license": "ISC",
   "author": "Eduarda Pontel",
   "description": "Task management API",
   "dependencies": {
     "express": "^5.1.0",
-    "express-async-errors": "^3.1.1"
+    "express-async-errors": "^3.1.1",
+    "zod": "^4.1.12"
   },
   "devDependencies": {
     "@types/express": "^5.0.3",
     "@types/node": "^24.7.2",
+    "prisma": "^6.17.1",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3"
   }
