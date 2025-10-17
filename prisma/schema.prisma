@@ -1,9 +1,108 @@
 generator client {
   provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  admin
+  member
+}
+
+model User {
+  id       String @id @default(uuid())
+  name     String
+  email    String @unique
+  password String
+
+  role UserRole @default(member)
+
+  teamMembers  TeamMembers[]
+  tasks        Tasks[]
+  tasksHistory TasksHistory[]
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime? @updatedAt @map("updated_at")
+
+  @@map("users")
+}
+
+model TeamMembers {
+  id     String @id @default(uuid())
+  userId String @unique @map("user_id")
+  teamId String @map("team_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+  team Team @relation(fields: [teamId], references: [id])
+
+  @@map("team_members")
+}
+
+model Team {
+  id          String  @id @default(uuid())
+  name        String
+  description String?
+
+  teamMembers TeamMembers[]
+  tasks       Tasks[]
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime? @updatedAt @map("updated_at")
+
+  @@map("teams")
+}
+
+enum TaskStatus {
+  pending
+  in_progress
+  completed
+}
+
+enum TaskPriority {
+  low
+  medium
+  high
+}
+
+model Tasks {
+  id          String  @id @default(uuid())
+  title       String
+  description String?
+
+  status   TaskStatus   @default(pending)
+  priority TaskPriority
+
+  assignedTo String? @map("assigned_to")
+  teamId     String  @map("team_id")
+
+  user User? @relation(fields: [assignedTo], references: [id])
+  team Team  @relation(fields: [teamId], references: [id])
+
+  taskHistory TasksHistory?
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime? @updatedAt @map("updated_at")
+
+  @@map("tasks")
+}
+
+model TasksHistory {
+  id        String @id @default(uuid())
+  taskId    String @unique @map("task_id")
+  changedBy String @map("changed_by")
+
+  previousStatus TaskStatus @map("previous_status")
+  newStatus      TaskStatus @map("new_status")
+
+  task Tasks @relation(fields: [taskId], references: [id])
+  user User  @relation(fields: [changedBy], references: [id])
+
+  changedAt DateTime @default(now()) @map("changed_at")
+
+  @@map("tasks_history")
 }
