@@ -83,7 +83,7 @@ model Tasks {
   user User? @relation(fields: [assignedTo], references: [id])
   team Team  @relation(fields: [teamId], references: [id], onDelete: Cascade)
 
-  taskHistory TasksHistory?
+  taskHistory TasksHistory[]
 
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime? @updatedAt @map("updated_at")
@@ -93,7 +93,7 @@ model Tasks {
 
 model TasksHistory {
   id        String @id @default(uuid())
-  taskId    String @unique @map("task_id")
+  taskId    String @map("task_id")
   changedBy String @map("changed_by")
 
   previousStatus TaskStatus @map("previous_status")
