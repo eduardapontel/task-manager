@@ -4,8 +4,8 @@ import { prisma } from '@/database/prisma';
 import { hash } from 'bcrypt';
 
 export async function authenticateUser() {
-  const email = 'authuser@example.com';
-
+  const email = `authuser${crypto.randomUUID()}@example.com`;
+  
   let user = await prisma.user.findFirst({ where: { email } });
 
   if (!user) {

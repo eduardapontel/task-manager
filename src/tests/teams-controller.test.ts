@@ -85,5 +85,7 @@ describe('TeamsController', () => {
 
         expect(response.status).toBe(200);
         expect(response.body).toHaveProperty('message', 'Team deleted successfully.');
+
+        team_id = '';
     });
 });

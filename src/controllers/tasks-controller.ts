@@ -92,7 +92,11 @@ class TasksController {
     }
 
     async update(request: Request, response: Response) {
-        const { id } = request.params;
+        const paramsSchema = z.object({
+            id: z.string().uuid('Invalid task ID format'),
+        });
+
+        const { id } = paramsSchema.parse(request.params);
         const userId = request.user?.id;
 
         if (!userId) {
@@ -109,38 +113,48 @@ class TasksController {
 
         const { title, description, status, priority, teamId } = bodySchema.parse(request.body);
 
-        const existingTask = await prisma.tasks.findUnique({
-            where: { id },
-            select: { status: true },
-        });
+        try {
+            const existingTask = await prisma.tasks.findUnique({
+                where: { id },
+                select: { status: true },
+            });
 
-        if (!existingTask) {
-            throw new AppError('Task not found.', 404);
-        }
+            if (!existingTask) {
+                throw new AppError('Task not found.', 404);
+            }
 
-        await prisma.tasks.update({
-            where: { id },
-            data: {
-                title,
-                description,
-                status,
-                priority,
-                teamId,
-            },
-        });
-
-        if (status && status !== existingTask.status) {
-            await prisma.tasksHistory.create({
+            await prisma.tasks.update({
+                where: { id },
                 data: {
-                    taskId: id,
-                    changedBy: userId,
-                    previousStatus: existingTask.status,
-                    newStatus: status,
+                    title,
+                    description,
+                    status,
+                    priority,
+                    teamId,
                 },
             });
-        }
 
-        return response.status(200).json({ message: 'Task updated successfully.' });
+            if (status && status !== existingTask.status) {
+                await prisma.tasksHistory.create({
+                    data: {
+                        taskId: id,
+                        changedBy: userId,
+                        previousStatus: existingTask.status,
+                        newStatus: status,
+                    },
+                });
+            }
+
+            return response.status(200).json({ message: 'Task updated successfully.' });
+        } catch (error) {
+            if (error instanceof AppError) throw error;
+
+            if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
+                throw new AppError('Task not found.', 404);
+            }
+
+            throw error;
+        }
     }
 
     async history(request: Request, response: Response) {
@@ -179,11 +193,17 @@ class TasksController {
     async delete(request: Request, response: Response) {
         const { id } = request.params;
 
-        await prisma.tasks.delete({
-            where: { id },
-        });
+        const task = await prisma.tasks.findUnique({ where: { id } });
 
-        return response.status(200).json({ message: 'Task deleted successfully.' });
+        if (!task) {
+            throw new AppError('Task not found.', 404);
+        }
+
+        await prisma.tasks.delete({ where: { id } });
+
+        return response.status(200).json({
+            message: 'Task deleted successfully.',
+        });
     }
 }
 
