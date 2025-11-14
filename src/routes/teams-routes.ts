@@ -10,7 +10,7 @@ teamsRoutes.use(ensureAuthenticated);
 teamsRoutes.use(verifyUserAuthorization(['admin']));
 teamsRoutes.post('/', teamsController.create);
 teamsRoutes.get('/', teamsController.list);
-teamsRoutes.patch('/', teamsController.edit);
-teamsRoutes.delete('/', teamsController.delete);
+teamsRoutes.patch('/:id', teamsController.edit);
+teamsRoutes.delete('/:id', teamsController.delete);
 
 export { teamsRoutes };

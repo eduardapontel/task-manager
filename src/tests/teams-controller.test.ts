@@ -5,87 +5,216 @@ import { authenticateUser } from './utils/authenticate-user';
 
 describe('TeamsController', () => {
     let token: string;
-    let team_id: string;
+    let userId: string;
 
     beforeAll(async () => {
         const auth = await authenticateUser();
         token = auth.token;
+        userId = auth.user.id;
     });
 
     afterAll(async () => {
-        if (team_id) {
-            const teamExists = await prisma.team.findUnique({
-                where: { id: team_id },
-            });
+        await prisma.team.deleteMany({
+            where: {
+                name: {
+                    in: [
+                        'Test Team Create',
+                        'Test Team Edit',
+                        'Test Team Edit Updated',
+                        'Test Team Delete',
+                    ],
+                },
+            },
+        });
 
-            if (teamExists) {
-                await prisma.team.delete({ where: { id: team_id } });
-            }
+        if (userId) {
+            await prisma.user.deleteMany({
+                where: { id: userId },
+            });
         }
+
+        await prisma.$disconnect();
     });
 
-    it('should create a new team successfully', async () => {
-        const team = await prisma.team.create({
-            data: {
-                name: 'Development Team',
-                description: 'Team responsible for software development',
-            },
+    describe('POST /teams', () => {
+        it('should create a new team successfully', async () => {
+            const response = await request(app)
+                .post('/teams')
+                .set('Authorization', `Bearer ${token}`)
+                .send({
+                    name: 'Test Team Create',
+                    description: 'Team for create test',
+                });
+
+            expect(response.status).toBe(201);
+            expect(response.body).toHaveProperty('message', 'Team created successfully.');
+            expect(response.body.team).toHaveProperty('id');
+            expect(response.body.team.name).toBe('Test Team Create');
         });
 
-        team_id = team.id;
-
-        expect(team).toHaveProperty('id');
-        expect(team.name).toBe('Development Team');
-    });
-
-    it('should list all teams', async () => {
-        const response = await request(app).get('/teams').set('Authorization', `Bearer ${token}`);
-
-        expect(response.status).toBe(200);
-        expect(Array.isArray(response.body)).toBe(true);
-    });
-
-    it('should edit a team successfully', async () => {
-        const team = await prisma.team.create({
-            data: {
-                name: 'Development Team',
-                description: 'Team responsible for software development',
-            },
-        });
-
-        const response = await request(app)
-            .patch(`/teams`)
-            .set('Authorization', `Bearer ${token}`)
-            .send({
-                id: team.id,
-                name: 'QA Team',
-                description: 'Team responsible for quality assurance',
+        it('should return 400 when team name already exists', async () => {
+            await request(app).post('/teams').set('Authorization', `Bearer ${token}`).send({
+                name: 'Duplicate Team',
+                description: 'First team',
             });
 
-        expect(response.status).toBe(200);
-        expect(response.body).toHaveProperty('message', 'Team updated successfully.');
+            const response = await request(app)
+                .post('/teams')
+                .set('Authorization', `Bearer ${token}`)
+                .send({
+                    name: 'Duplicate Team',
+                    description: 'Second team',
+                });
 
-        await prisma.team.delete({ where: { id: team.id } });
-    });
+            expect(response.status).toBe(400);
+            expect(response.body).toHaveProperty('message', 'Team name already exists.');
 
-    it('should delete a team successfully', async () => {
-        const team = await prisma.team.create({
-            data: {
-                name: 'QA Team',
-                description: 'Team responsible for quality assurance',
-            },
+            await prisma.team.deleteMany({
+                where: { name: 'Duplicate Team' },
+            });
         });
 
-        team_id = team.id;
+        it('should return 401 without authentication', async () => {
+            const response = await request(app).post('/teams').send({
+                name: 'Unauthorized Team',
+                description: 'Should fail',
+            });
 
-        const response = await request(app)
-            .delete(`/teams`)
-            .set('Authorization', `Bearer ${token}`)
-            .send({ id: team_id });
+            expect(response.status).toBe(401);
+        });
+    });
 
-        expect(response.status).toBe(200);
-        expect(response.body).toHaveProperty('message', 'Team deleted successfully.');
+    describe('GET /teams', () => {
+        beforeAll(async () => {
+            await prisma.team.createMany({
+                data: [
+                    { name: 'Team List 1', description: 'First team' },
+                    { name: 'Team List 2', description: 'Second team' },
+                ],
+            });
+        });
 
-        team_id = '';
+        afterAll(async () => {
+            await prisma.team.deleteMany({
+                where: {
+                    name: {
+                        in: ['Team List 1', 'Team List 2'],
+                    },
+                },
+            });
+        });
+
+        it('should list all teams', async () => {
+            const response = await request(app)
+                .get('/teams')
+                .set('Authorization', `Bearer ${token}`);
+
+            expect(response.status).toBe(200);
+            expect(Array.isArray(response.body)).toBe(true);
+            expect(response.body.length).toBeGreaterThanOrEqual(2);
+        });
+    });
+
+    describe('PATCH /teams/:id', () => {
+        let teamId: string;
+
+        beforeEach(async () => {
+            const team = await prisma.team.create({
+                data: {
+                    name: `Test Team Edit ${Date.now()}`,
+                    description: 'Original description',
+                },
+            });
+            teamId = team.id;
+        });
+
+        afterEach(async () => {
+            if (teamId) {
+                await prisma.team.deleteMany({
+                    where: { id: teamId },
+                });
+            }
+        });
+
+        it('should edit a team successfully', async () => {
+            const response = await request(app)
+                .patch(`/teams/${teamId}`)
+                .set('Authorization', `Bearer ${token}`)
+                .send({
+                    name: 'Updated Team Name',
+                    description: 'Updated description',
+                });
+
+            expect(response.status).toBe(200);
+            expect(response.body).toHaveProperty('message', 'Team updated successfully.');
+
+            const updatedTeam = await prisma.team.findUnique({
+                where: { id: teamId },
+            });
+
+            expect(updatedTeam?.name).toBe('Updated Team Name');
+            expect(updatedTeam?.description).toBe('Updated description');
+        });
+
+        it('should return 404 for non-existent team', async () => {
+            const fakeId = '00000000-0000-0000-0000-000000000000';
+
+            const response = await request(app)
+                .patch(`/teams/${fakeId}`)
+                .set('Authorization', `Bearer ${token}`)
+                .send({
+                    name: 'Updated Name',
+                });
+
+            expect(response.status).toBe(404);
+        });
+
+        it('should return 400 when body is empty', async () => {
+            const response = await request(app)
+                .patch(`/teams/${teamId}`)
+                .set('Authorization', `Bearer ${token}`)
+                .send({});
+
+            expect(response.status).toBe(400);
+        });
+    });
+
+    describe('DELETE /teams/:id', () => {
+        let teamId: string;
+
+        beforeEach(async () => {
+            const team = await prisma.team.create({
+                data: {
+                    name: `Test Team Delete ${Date.now()}`, // ✅ Nome único
+                    description: 'Team to be deleted',
+                },
+            });
+            teamId = team.id;
+        });
+
+        it('should delete a team successfully', async () => {
+            const response = await request(app)
+                .delete(`/teams/${teamId}`)
+                .set('Authorization', `Bearer ${token}`);
+
+            expect(response.status).toBe(200);
+            expect(response.body).toHaveProperty('message', 'Team deleted successfully.');
+
+            const deletedTeam = await prisma.team.findUnique({
+                where: { id: teamId },
+            });
+
+            expect(deletedTeam).toBeNull();
+        });
+
+        it('should return 404 when deleting non-existent team', async () => {
+            const fakeId = '00000000-0000-0000-0000-000000000000';
+
+            const response = await request(app)
+                .delete(`/teams/${fakeId}`)
+                .set('Authorization', `Bearer ${token}`);
+
+            expect(response.status).toBe(404);
+        });
     });
 });

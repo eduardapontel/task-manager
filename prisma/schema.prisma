@@ -20,7 +20,7 @@ model User {
 
   role UserRole @default(member)
 
-  teamMembers  TeamMembers[]
+  teamMembers  TeamMembers?
   tasks        Tasks[]
   tasksHistory TasksHistory[]
 
@@ -45,7 +45,7 @@ model TeamMembers {
 
 model Team {
   id          String  @id @default(uuid())
-  name        String
+  name        String @unique
   description String?
 
   teamMembers TeamMembers[]

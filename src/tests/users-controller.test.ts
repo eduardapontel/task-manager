@@ -1,12 +1,19 @@
 import request from 'supertest';
 import { prisma } from '@/database/prisma';
+import { authenticateUser } from './utils/authenticate-user';
 import { app } from '@/app';
 
 describe('UsersController', () => {
-    let user_id: string;
+    let userId: string;
+    let token: string;
+
+    beforeAll(async () => {
+        const auth = await authenticateUser();
+        token = auth.token;
+    });
 
     afterAll(async () => {
-        await prisma.user.delete({ where: { id: user_id } });
+        await prisma.user.delete({ where: { id: userId } });
     });
 
     it('should create a new user successfully', async () => {
@@ -25,7 +32,7 @@ describe('UsersController', () => {
         expect(response.body).toHaveProperty('name', 'Test User');
         expect(response.body).toHaveProperty('email', 'testuser@example.com');
 
-        user_id = response.body.id;
+        userId = response.body.id;
     });
 
     it('should not create a user with an existing email', async () => {
@@ -48,5 +55,28 @@ describe('UsersController', () => {
 
         expect(response.status).toBe(400);
         expect(response.body).toHaveProperty('message', 'Validation error');
+    });
+
+    it('should update user details successfully', async () => {
+        const response = await request(app)
+            .patch('/users')
+            .set('Authorization', `Bearer ${token}`)
+            .send({
+                name: 'Updated User',
+            });
+
+        expect(response.status).toBe(200);
+        expect(response.body).toHaveProperty('id', userId);
+        expect(response.body).toHaveProperty('name', 'Updated User');
+        expect(response.body).toHaveProperty('email', 'testuser@example.com');
+    });
+
+    it('should delete a user successfully', async () => {
+        const response = await request(app)
+        .delete(`/users`)
+        .set('Authorization', `Bearer ${token}`);
+
+        expect(response.status).toBe(200);
+        expect(response.body).toHaveProperty('message', 'User deleted successfully.');
     });
 });

@@ -41,6 +41,14 @@ class TasksController {
 
         const { title, description, status, priority, teamId } = bodySchema.parse(request.body);
 
+        const team = await prisma.team.findUnique({
+            where: { id: teamId },
+        });
+
+        if (!team) {
+            throw new AppError('Team not found.', 404);
+        }
+
         await prisma.tasks.create({
             data: {
                 title,
@@ -55,10 +63,14 @@ class TasksController {
     }
 
     async assign(request: Request, response: Response) {
-        const { id } = request.params;
+        const paramsSchema = z.object({
+            id: z.string().uuid('Invalid task ID'),
+        });
+
+        const { id } = paramsSchema.parse(request.params);
 
         const bodySchema = z.object({
-            assignedTo: z.string().uuid(),
+            assignedTo: z.string().uuid('Invalid user ID'),
         });
 
         const { assignedTo } = bodySchema.parse(request.body);
@@ -72,6 +84,14 @@ class TasksController {
             throw new AppError('Task not found.', 404);
         }
 
+        const userToAssign = await prisma.user.findUnique({
+            where: { id: assignedTo },
+        });
+
+        if (!userToAssign) {
+            throw new AppError('User not found.', 404);
+        }
+
         const isMember = await prisma.teamMembers.findFirst({
             where: {
                 teamId: task.teamId,
@@ -80,7 +100,7 @@ class TasksController {
         });
 
         if (!isMember) {
-            throw new AppError('User is not a member of the team.', 400);
+            throw new AppError('User is not a member of the team.', 404);
         }
 
         await prisma.tasks.update({
@@ -103,24 +123,42 @@ class TasksController {
             throw new AppError('User must be authenticated to change task status', 401);
         }
 
-        const bodySchema = z.object({
-            title: z.string().trim().min(1).optional(),
-            description: z.string().trim().optional(),
-            status: z.enum(['pending', 'in_progress', 'completed']).optional(),
-            priority: z.enum(['low', 'medium', 'high']).optional(),
-            teamId: z.string().uuid().optional(),
-        });
+        const bodySchema = z
+            .object({
+                title: z.string().trim().min(1).optional(),
+                description: z.string().trim().optional(),
+                status: z.enum(['pending', 'in_progress', 'completed']).optional(),
+                priority: z.enum(['low', 'medium', 'high']).optional(),
+                teamId: z.string().uuid().optional(),
+            })
+            .refine((data) => Object.keys(data).length > 0, {
+                message: 'At least one field must be provided to update',
+            });
 
-        const { title, description, status, priority, teamId } = bodySchema.parse(request.body);
+        const { title, description, status, priority, teamId, } = bodySchema.parse(request.body);
 
         try {
             const existingTask = await prisma.tasks.findUnique({
                 where: { id },
-                select: { status: true },
+                select: { status: true, teamId: true, assignedTo: true },
             });
 
             if (!existingTask) {
                 throw new AppError('Task not found.', 404);
+            }
+
+            let assigned = existingTask.assignedTo;
+
+            if (teamId && teamId !== existingTask.teamId) {
+                const newTeam = await prisma.team.findUnique({
+                    where: { id: teamId },
+                });
+
+                if (!newTeam) {
+                    throw new AppError('New team not found.', 404);
+                }
+
+                assigned = null;
             }
 
             await prisma.tasks.update({
@@ -131,6 +169,7 @@ class TasksController {
                     status,
                     priority,
                     teamId,
+                    assignedTo: assigned,
                 },
             });
 
@@ -158,7 +197,11 @@ class TasksController {
     }
 
     async history(request: Request, response: Response) {
-        const { id } = request.params;
+        const paramsSchema = z.object({
+            id: z.string().uuid('Invalid task ID'),
+        });
+
+        const { id } = paramsSchema.parse(request.params);
 
         const task = await prisma.tasks.findUnique({
             where: { id },
@@ -191,7 +234,11 @@ class TasksController {
     }
 
     async delete(request: Request, response: Response) {
-        const { id } = request.params;
+        const paramsSchema = z.object({
+            id: z.string().uuid('Invalid task ID'),
+        });
+
+        const { id } = paramsSchema.parse(request.params);
 
         const task = await prisma.tasks.findUnique({ where: { id } });
 

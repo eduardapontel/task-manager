@@ -6,17 +6,13 @@ function verifyRoleOrAssignment(roles: string[]) {
   const roleCheck = verifyUserAuthorization(roles);
   const assignmentCheck = verifyTaskAssignment();
 
-  return async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      await Promise.resolve(roleCheck(req, res, next));
-    } catch (err) {
-      try {
-        await Promise.resolve(assignmentCheck(req, res, next));
-      } catch (err2) {
-        return next(err2); 
-      } 
-    }
-  };
+  return async (request: Request, response: Response, next: NextFunction) => {
+  try {
+    await roleCheck(request, response, next);
+  } catch {
+    await assignmentCheck(request, response, next);
+  }
+};
 }
 
 export { verifyRoleOrAssignment };

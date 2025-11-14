@@ -9,13 +9,13 @@ import { z } from 'zod';
 class SessionsController {
     async create(request: Request, response: Response) {
         const bodySchema = z.object({
-            email: z.string().email(),
-            password: z.string().min(6),
+            email: z.string().email('Invalid email format').trim(),
+            password: z.string().min(6, 'Password must be at least 6 characters'),
         });
 
         const { email, password } = bodySchema.parse(request.body);
 
-        const user = await prisma.user.findFirst({
+        const user = await prisma.user.findUnique({
             where: { email },
         });
 
