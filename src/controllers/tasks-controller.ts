@@ -137,7 +137,7 @@ class TasksController {
 
         const { title, description, status, priority, teamId, } = bodySchema.parse(request.body);
 
-        try {
+        
             const existingTask = await prisma.tasks.findUnique({
                 where: { id },
                 select: { status: true, teamId: true, assignedTo: true },
@@ -185,15 +185,6 @@ class TasksController {
             }
 
             return response.status(200).json({ message: 'Task updated successfully.' });
-        } catch (error) {
-            if (error instanceof AppError) throw error;
-
-            if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
-                throw new AppError('Task not found.', 404);
-            }
-
-            throw error;
-        }
     }
 
     async history(request: Request, response: Response) {

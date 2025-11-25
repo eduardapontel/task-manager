@@ -34,7 +34,7 @@ describe('TasksController', () => {
         await prisma.tasks.deleteMany({ where: { teamId: teamId } });
 
         if (teamId) {
-            await prisma.teamMembers.deleteMany({ where: { teamId: teamId } });
+            await prisma.teamMembers.deleteMany({ where: { teamId } });
             await prisma.team.delete({ where: { id: teamId } });
         }
 

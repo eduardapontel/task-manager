@@ -27,6 +27,15 @@ describe('TeamsController', () => {
             },
         });
 
+        await prisma.team.deleteMany({
+            where: {
+                OR: [
+                    { name: { startsWith: 'Test Team Delete' } },
+                    { name: { startsWith: 'Test Team Edit' } },
+                ],
+            },
+        });
+
         if (userId) {
             await prisma.user.deleteMany({
                 where: { id: userId },
@@ -190,6 +199,14 @@ describe('TeamsController', () => {
                 },
             });
             teamId = team.id;
+        });
+
+        afterEach(async () => {
+            if (teamId) {
+                await prisma.team.deleteMany({
+                    where: { id: teamId },
+                });
+            }
         });
 
         it('should delete a team successfully', async () => {

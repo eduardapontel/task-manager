@@ -1,13 +1,18 @@
 import { Request, Response, NextFunction } from 'express';
 import { prisma } from '@/database/prisma';
 import { AppError } from '@/utils/AppError';
+import { z } from 'zod';
 
 function verifyTaskAssignment() {
     return async (request: Request, response: Response, next: NextFunction) => {
-        const { id } = request.params;
+        const paramsSchema = z.object({
+            id: z.string().uuid('Invalid task ID format'),
+        });
+
+        const { id } = paramsSchema.parse(request.params);
 
         const task = await prisma.tasks.findUnique({
-            where: { id},
+            where: { id },
         });
 
         if (!task) {
