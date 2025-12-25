@@ -1,4 +1,4 @@
-# Task Manager API 🚀
+# Task Manager API ✔️
 
 A RESTful API for managing tasks, teams, and users in a collaborative environment. It provides secure authentication, role-based access control, and a scalable architecture focused on maintainability, validation, and automated testing.
 
