@@ -156,15 +156,97 @@ The server will be available at [http://localhost:3333](http://localhost:3333)
 
 <br>
 
-## Running Tests 🧪
+## Tests 🧪
 
+The test suite is organized by controller, with each file validating the behavior of a specific API module. All tests perform real HTTP requests using an isolated test database to ensure correctness and prevent regressions.
+
+<br>
+
+### 📄 `sessions-controller.test.ts`
+
+Tests related to user authentication.
+
+- **Successful authentication**
+  - Verifies that a user can log in with valid credentials.
+  - Confirms a JWT token is returned.
+
+- **Invalid credentials**
+  - Ensures authentication fails when email or password is incorrect.
+  - Validates proper error status and response message.
+
+<br>
+
+### 📄 `users-controller.test.ts`
+
+Tests related to user management.
+
+- **Create user**
+  - Ensures a new user can be created with valid data.
+  - Verifies required fields are enforced.
+
+- **Duplicate email**
+  - Prevents creating multiple users with the same email.
+
+- **Protected routes**
+  - Confirms user-related routes require authentication.
+
+<br>
+
+### 📄 `tasks-controller.test.ts`
+
+Tests covering the full task lifecycle.
+
+- **Create task**
+  - Ensures authenticated users can create tasks.
+  - Validates required task fields.
+
+- **List tasks**
+  - Confirms users can retrieve tasks they are authorized to access.
+
+- **Update task**
+  - Ensures tasks can be updated by authorized users only.
+  - Prevents unauthorized updates.
+
+- **Delete task**
+  - Validates that task deletion follows permission rules.
+
+<br>
+
+### 📄 `teams-controller.test.ts`
+
+Tests related to team management.
+
+- **Create team**
+  - Ensures authenticated users can create a team.
+  - Validates required team information.
+
+- **List teams**
+  - Confirms users can retrieve teams they belong to.
+
+<br>
+
+### 📄 `team-members-controller.test.ts`
+
+Tests for managing team membership.
+
+- **Add member to team**
+  - Ensures users can be added to a team.
+  - Prevents duplicate memberships.
+
+- **Remove member from team**
+  - Ensures members can be removed correctly.
+  - Validates authorization rules for team management.
+
+<br>
+
+### Running Tests ▶️
 ```bash
 npm run test:dev
 ```
 
 <br>
 
-## 🤝 Contributing 
+## Contributing 🤝 
 
 Feel free to contribute to this project by submitting issues or pull requests. Your feedback and suggestions are always welcome!
 
